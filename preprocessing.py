@@ -11,7 +11,7 @@ import numpy as np
 
 
 # de zogezegde "live" image 
-input = cv2.imread("./fingerprint_db.jpg", 2)
+input = cv2.imread("./thumb2.jpg", 2)
 
 input = cv2.resize(input, None, fx=1, fy=1)
 
@@ -50,23 +50,27 @@ filtered = np.uint8(filtered)
 
 
 # binarization 
-# binarized = cv2.threshold(filtered, 175, 255, cv2.THRESH_BINARY)[1]
+binarized = cv2.threshold(filtered, 150, 255, cv2.THRESH_BINARY_INV)[1]
 
 
-"""
-Ridge detection
-door aan binarization te doen met de adaptive threshold (gaussian)
-"""
+# Ridge detection
+def detect_ridges(gray, sigma=0.15):
+    H_elems = hessian_matrix(gray, sigma=sigma, order='rc')
+    maxima_ridges, minima_ridges = hessian_matrix_eigvals(H_elems)
+    return maxima_ridges, minima_ridges
 
-# def detect_ridges(gray, sigma=0.15):
-#     H_elems = hessian_matrix(gray, sigma=sigma, order='rc')
-#     maxima_ridges, minima_ridges = hessian_matrix_eigvals(H_elems)
-#     return maxima_ridges, minima_ridges
 
-def detect_ridges(img):
-    binarized = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 27, 10)
-    return binarized
+# Visualisatie van de originele afbeelding en de gedetecteerde randen
+def plot_images(*images):
+    images = list(images)
+    n = len(images)
 
+    for i, img in enumerate(images):
+        ax[i].imshow(img, cmap='gray')
+        ax[i].axis('off')
+
+    plt.subplots_adjust(left=0.03, bottom=0.03, right=0.97, top=0.97)
+    # plt.show()
 
 def minutiae_at(pixels, i, j, kernel_size):
     """
@@ -183,24 +187,25 @@ def calculate_singularities(im, angles, tolerance, W, mask):
 
     return result
 
-"""ridge detection"""
-img = detect_ridges(filtered)
+max_ridges, min_ridges = detect_ridges(binarized, sigma=2.2)
+# plot_images(filtered, max_ridges, min_ridges)
 
-ridge_thresh = threshold_otsu(-img)
-ridge_binary = (-img) > ridge_thresh
+ridge_thresh = threshold_otsu(-min_ridges)
+ridge_binary = (-min_ridges) > ridge_thresh
 
 # filtering om ruis te verwijderen
 ridge_binary = ridge_binary.astype(np.uint8) * 255
 kernel = np.ones((3, 3), np.uint8)
 ridge_binary = cv2.morphologyEx(ridge_binary, cv2.MORPH_CLOSE, kernel)
 
-
-"""skeletonize en thinning op ridge detectie"""
+# skeletonization en thinning op ridge-detectie
+"""skeleton is beter"""
 skeleton = skeletonize(ridge_binary > 0, method='lee').astype(np.float32)
 thinned = thin(ridge_binary).astype(np.float32)
 
-"""minutiaes en singularities op de thinned image"""
+# minutiaes en singularities op de thinned image
 minutias = calculate_minutiaes(thinned)
+
 #singularities_img
 
 # Visualisatie
@@ -219,18 +224,15 @@ ax[2].imshow(thinned, cmap='gray')
 ax[2].set_title('Thinned (Ridges)')
 ax[2].axis('off')
 
-ax[3].imshow(img, cmap='gray')
+ax[3].imshow(binarized, cmap='gray')
 ax[3].set_title('Binarized Image (Ridges)')
 ax[3].axis('off')
 
 plt.tight_layout()
 plt.show()
 
-""" 
-als afbeelding opslaan 
--> uit commentaar zetten als je wilt opslaan
-"""
-# cv2.imwrite("./fingerprint_v2/skeleton4.png", (skeleton * 255).astype(np.uint8))  
+# # als afbeelding opslaan 
+# cv2.imwrite("skeleton_preedit1.png", (skeleton * 255).astype(np.uint8))  
 
 # # als np array opslaan = sneller en exacter + voor berekeningen 
 # np.save("skeleton2.npy", skeleton)
