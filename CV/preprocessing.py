@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+import math
 from skimage.filters import threshold_otsu
 from skimage.morphology import skeletonize
 import matplotlib.pyplot as plt
@@ -72,7 +73,120 @@ def plot_images(*images):
     plt.subplots_adjust(left=0.03, bottom=0.03, right=0.97, top=0.97)
     # plt.show()
 
+def minutiae_at(pixels, i, j, kernel_size):
+    """
+    https://airccj.org/CSCP/vol7/csit76809.pdf pg93
+    Crossing number methods is a really simple way to detect ridge endings and ridge bifurcations.
+    Then the crossing number algorithm will look at 3x3 pixel blocks:
 
+    if middle pixel is black (represents ridge):
+    if pixel on boundary are crossed with the ridge once, then it is a possible ridge ending
+    if pixel on boundary are crossed with the ridge three times, then it is a ridge bifurcation
+
+    :param pixels:
+    :param i:
+    :param j:
+    :return:
+    """
+    # if middle pixel is black (represents ridge)
+    if pixels[i][j] == 1:
+
+        if kernel_size == 3:
+            cells = [(-1, -1), (-1, 0), (-1, 1),        # p1 p2 p3
+                   (0, 1),  (1, 1),  (1, 0),            # p8    p4
+                  (1, -1), (0, -1), (-1, -1)]           # p7 p6 p5
+        else:
+            cells = [(-2, -2), (-2, -1), (-2, 0), (-2, 1), (-2, 2),                 # p1 p2   p3
+                   (-1, 2), (0, 2),  (1, 2),  (2, 2), (2, 1), (2, 0),               # p8      p4
+                  (2, -1), (2, -2), (1, -2), (0, -2), (-1, -2), (-2, -2)]           # p7 p6   p5
+
+        values = [pixels[i + l][j + k] for k, l in cells]
+
+        # count crossing how many times it goes from 0 to 1
+        crossings = 0
+        for k in range(0, len(values)-1):
+            crossings += abs(values[k] - values[k + 1])
+        crossings //= 2
+
+        # if pixel on boundary are crossed with the ridge once, then it is a possible ridge ending
+        # if pixel on boundary are crossed with the ridge three times, then it is a ridge bifurcation
+        if crossings == 1:
+            return "ending"
+        if crossings == 3:
+            return "bifurcation"
+
+    return "none"
+
+def calculate_minutiaes(im, kernel_size=3):
+    biniry_image = np.zeros_like(im)
+    biniry_image[im<10] = 1.0
+    biniry_image = biniry_image.astype(np.int8)
+
+    (y, x) = im.shape
+    result = cv2.cvtColor(im, cv2.COLOR_GRAY2RGB)
+    colors = {"ending" : (150, 0, 0), "bifurcation" : (0, 150, 0)}
+
+    # iterate each pixel minutia
+    for i in range(1, x - kernel_size//2):
+        for j in range(1, y - kernel_size//2):
+            minutiae = minutiae_at(biniry_image, j, i, kernel_size)
+            if minutiae != "none":
+                cv2.circle(result, (i,j), radius=2, color=colors[minutiae], thickness=2)
+
+    return result
+
+def poincare_index_at(i, j, angles, tolerance):
+    """
+    compute the summation difference between the adjacent orientations such that the orientations is less then 90 degrees
+    https://books.google.pl/books?id=1Wpx25D8qOwC&lpg=PA120&ots=9wRY0Rosb7&dq=poincare%20index%20fingerprint&hl=pl&pg=PA120#v=onepage&q=poincare%20index%20fingerprint&f=false
+    :param i:
+    :param j:
+    :param angles:
+    :param tolerance:
+    :return:
+    """
+    cells = [(-1, -1), (-1, 0), (-1, 1),         # p1 p2 p3
+            (0, 1),  (1, 1),  (1, 0),            # p8    p4
+            (1, -1), (0, -1), (-1, -1)]          # p7 p6 p5
+
+    angles_around_index = [math.degrees(angles[i - k][j - l]) for k, l in cells]
+    index = 0
+    for k in range(0, 8):
+
+        # calculate the difference
+        difference = angles_around_index[k] - angles_around_index[k + 1]
+        if difference > 90:
+            difference -= 180
+        elif difference < -90:
+            difference += 180
+
+        index += difference
+
+    if 180 - tolerance <= index <= 180 + tolerance:
+        return "loop"
+    if -180 - tolerance <= index <= -180 + tolerance:
+        return "delta"
+    if 360 - tolerance <= index <= 360 + tolerance:
+        return "whorl"
+    return "none"
+
+def calculate_singularities(im, angles, tolerance, W, mask):
+    result = cv2.cvtColor(im, cv2.COLOR_GRAY2RGB)
+
+    # DELTA: RED, LOOP:ORAGNE, whorl:INK
+    colors = {"loop" : (0, 0, 255), "delta" : (0, 128, 255), "whorl": (255, 153, 255)}
+
+    for i in range(3, len(angles) - 2):             # Y
+        for j in range(3, len(angles[i]) - 2):      # x
+            # mask any singularity outside of the mask
+            mask_slice = mask[(i-2)*W:(i+3)*W, (j-2)*W:(j+3)*W]
+            mask_flag = np.sum(mask_slice)
+            if mask_flag == (W*5)**2:
+                singularity = poincare_index_at(i, j, angles, tolerance)
+                if singularity != "none":
+                    cv2.rectangle(result, ((j+0)*W, (i+0)*W), ((j+1)*W, (i+1)*W), colors[singularity], 3)
+
+    return result
 
 max_ridges, min_ridges = detect_ridges(filtered, sigma=0.15)
 # plot_images(filtered, max_ridges, min_ridges)
@@ -88,6 +202,10 @@ ridge_binary = cv2.morphologyEx(ridge_binary, cv2.MORPH_CLOSE, kernel)
 # skeletonization en thinning op ridge-detectie
 skeleton = skeletonize(ridge_binary > 0, method='lee').astype(np.float32)
 thinned = thin(ridge_binary).astype(np.float32)
+
+# minutiaes en singularities op de thinned image
+minutias = calculate_minutiaes(thinned)
+#singularities_img
 
 # Visualisatie
 fig, axes = plt.subplots(1, 3, figsize=(12, 4), sharex=True, sharey=True)
