@@ -1,77 +1,65 @@
 import cv2
 import os
+from preprocessing import FingerprintPreprocessor
+import matplotlib.pyplot as plt
+import numpy as np
 
-# matching with db
-fingerprint_live = cv2.imread("./fingerprint_v2/skeleton3.png")
-db_dir = "./fingerprint_v2"
+path1 = "./thumb.jpg"
+path2 = "./thumb2.jpg"
 
-sift = cv2.SIFT_create()
-keypoints_1, descriptors_1 = sift.detectAndCompute(fingerprint_live, None)
-
-print(f"Keypoints in fingerprint_img: {len(keypoints_1)}")
-
-
-if descriptors_1 is None:
-    print("Error: No descriptors found in the image")
-    exit(1)
-
-# finding nearest match with KNN algorithm 
-
-flann = cv2.FlannBasedMatcher(dict(algorithm=1, trees=10), dict())
-match_res = []
-
-for filename in os.listdir(db_dir):
-    filepath = os.path.join(db_dir, filename)
-    fingerprint_db_img = cv2.imread(filepath, cv2.IMREAD_GRAYSCALE)
-
-    if fingerprint_db_img is None:
-        print(f"Warning: Could not read {filename}")
-        continue
-
-    # SIFT detectie en descriptors
-    keypoints_2, descriptors_2 = sift.detectAndCompute(fingerprint_db_img, None)
-
-    if descriptors_2 is None:
-        print(f"Warning: No descriptors found in {filename}")
-        continue
-
-    matches = flann.knnMatch(descriptors_1, descriptors_2, k=2)
-    match_points = [p for p, q in matches if p.distance < 0.75 * q.distance]
-
-    # keypoint detection / detecting the fingerprint matched ID
-    keypoints = 0
-    if len(keypoints_1) <= len(keypoints_2):
-        keypoints = len(keypoints_1)            
-    else:
-        keypoints = len(keypoints_2)
-
-    match_perc = len(match_points) / keypoints * 100
-    match_res.append((filename, match_perc, fingerprint_db_img, keypoints_2, match_points))
-
-# if (len(match_points) / keypoints)>0.95:
-print("% match: ", len(match_points) / keypoints * 100)
-
-# geen idee waarom 
-print("Fingerprint ID: " + str(keypoints)) 
+# # preprocessor-object aan en verwerk de afbeelding
+# fingerprint = FingerprintPreprocessor(path)
+# thinned, skeleton = fingerprint.preprocess()
 
 
-match_res.sort(key=lambda x: x[1], reverse=True)
+def match_minutiae(minutiae1, minutiae2, threshold=10):
+    """
+    compare minutiae lists of 2 fingerprints by using the euclidean distance: 
+        np.linalg.norm(np.array(m1) - np.array(m2)) < threshold
 
-# Top 3 matches selecteren
-top_matches = match_res[:3]
+    use a set so that it doesn't match the same points several times
+    """
+    matches = []
+    matched_points_1 = set() 
+    matched_points_2 = set()
+    
+    for i, m1 in enumerate(minutiae1):
+        for j, m2 in enumerate(minutiae2):
+            if i not in matched_points_1 and j not in matched_points_2 and np.linalg.norm(np.array(m1) - np.array(m2)) < threshold:
+                matches.append((m1, m2))
+                matched_points_1.add(i)
+                matched_points_2.add(j)
+    
+    return len(matches) / max(len(minutiae1), len(minutiae2)) * 100 
 
-for i, (filename, match_percentage, db_img, keypoints_2, match_points) in enumerate(top_matches):
-    print(f"Match {i+1}: {filename} - {match_percentage:.2f}%")
-    result = cv2.drawMatchesKnn(fingerprint_live, keypoints_1, db_img, 
-                                keypoints_2, matches1to2=[match_points], outImg=None, matchColor=(0, 255, 0), 
-                                singlePointColor=(0, 255, 255),flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
-    # result = cv2.resize(result, None, fx=1, fy=1)
+def extract_minutiae(image_path):
+    """extract minutiae points from a fingerprint image."""
+    processor = FingerprintPreprocessor(image_path)
+    processor.preprocess()
+    processor.calculate_minutiaes()
+    return processor.minutiaes
 
-# de twee afbeeldingen bij elkaar zetten en zo vergelijken zodat je een overzicht hebt 
 
-    # cv2.namedWindow("result.jpg", cv2.WINDOW_NORMAL)
-    # cv2.setWindowProperty("result.jpg", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-    cv2.imshow(f"Match {i+1}: {filename}", result)
 
-cv2.waitKey()
-cv2.destroyAllWindows()
+minutiae1 = extract_minutiae(path1)
+minutiae2 = extract_minutiae(path2)
+
+""" 
+show the minutiae points
+"""
+fig, axes = plt.subplots(1, 2, figsize=(12, 4), sharex=True, sharey=True)
+ax = axes.ravel()
+ax[0].imshow(minutiae1, cmap='gray')
+ax[0].set_title('minutiae afbeelding 1')
+ax[0].axis('off')
+
+ax[1].imshow(minutiae2, cmap='gray')
+ax[1].set_title('minutiae afbeelding 2')
+ax[1].axis('off')
+
+
+plt.tight_layout()
+plt.show()
+
+match_score = match_minutiae(minutiae1, minutiae2)
+print(f"Minutiae match percentage: {match_score:.2f}%")

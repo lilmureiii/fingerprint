@@ -17,6 +17,7 @@ class FingerprintPreprocessor:
         self.preprocessed_img = None
         self.skeleton = None
         self.thinned = None
+        self.minutiaes = None
     
     def enhance_contrast(self): 
         clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
@@ -54,6 +55,7 @@ class FingerprintPreprocessor:
 
         self.skeleton = skeletonize(ridge_binary > 0, method='lee').astype(np.float32)
         self.thinned = thin(ridge_binary).astype(np.float32)
+        return self.thinned, self.skeleton
 
     def minutiae_at(self,pixels, i, j, kernel_size):
         if pixels[i][j] == 1:
@@ -99,9 +101,9 @@ class FingerprintPreprocessor:
         self.enhance_contrast()
         self.gabor_filtering()
         self.detect_ridges()
-        self.skeletonize_image()
+        return self.skeletonize_image()
 
-    def visualize(self): 
+    def visualize(self,skeleton, thinned): 
         fig, axes = plt.subplots(1, 5, figsize=(12, 4), sharex=True, sharey=True)
         ax = axes.ravel()
 
@@ -109,11 +111,11 @@ class FingerprintPreprocessor:
         ax[0].set_title('Filtered Image')
         ax[0].axis('off')
 
-        ax[1].imshow(self.skeleton, cmap='gray')
+        ax[1].imshow(skeleton, cmap='gray')
         ax[1].set_title('Skeleton (Ridges)')
         ax[1].axis('off')
 
-        ax[2].imshow(self.thinned, cmap='gray')
+        ax[2].imshow(thinned, cmap='gray')
         ax[2].set_title('Thinned (Ridges)')
         ax[2].axis('off')
 
@@ -130,8 +132,8 @@ class FingerprintPreprocessor:
     
 
 if __name__ == "__main__":
-    preprocessor = FingerprintPreprocessor("./thumb.jpg")
-    preprocessor.preprocess()
-    preprocessor.visualize()
+    preprocessor = FingerprintPreprocessor()
+    thinned, skeleton = preprocessor.preprocess()
+    preprocessor.visualize(skeleton,thinned)
+    # minutiaes = preprocessor.calculate_minutiaes
 
-    
