@@ -55,24 +55,32 @@ class FingerprintPreprocessor:
         self.skeleton = skeletonize(ridge_binary > 0, method='lee').astype(np.float32)
         self.thinned = thin(ridge_binary).astype(np.float32)
 
-    def preprocess(self):
-        """Voer de volledige preprocessing pipeline uit."""
-        self.enhance_contrast()
-        self.gabor_filtering()
-        self.detect_ridges()
-        self.skeletonize_image()
+    def minutiae_at(self,pixels, i, j, kernel_size):
+        if pixels[i][j] == 1:
+            cells = [(-1, -1), (-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1)]
+            values = [pixels[i + l][j + k] for k, l in cells]
+            crossings = 0
+            for k in range(len(values) - 1):
+                if values[k] != values[k + 1]:
+                    crossings += 1
+            crossings //= 2
 
-    def minutiae_at(self): 
-        """
-        nog aanvullen (na de self ook)
-        """
-        pass
+            if crossings == 1:
+                return "ending"
+            if crossings == 3:
+                return "bifurcation"
+        return "none"
 
-    def calculate_minutiaes(self,  kernel_size=3): 
-        """
-        nog aanvullen
-        """
-        pass
+    def calculate_minutiaes(self, kernel_size=3):
+        (y, x) = self.thinned.shape
+        result = cv2.cvtColor(self.thinned, cv2.COLOR_GRAY2RGB)
+        colors = {"ending": (255, 0, 0), "bifurcation": (0, 255, 0)}
+        for i in range(1, x - kernel_size // 2):
+            for j in range(1, y - kernel_size // 2):
+                minutiae = self.minutiae_at(self.thinned, j, i, kernel_size)
+                if minutiae != "none":
+                    cv2.circle(result, (i, j), radius=5, color=colors[minutiae], thickness=-1)
+        self.minutiaes = result
 
     def poincare_index_at(self): 
         """
@@ -86,8 +94,15 @@ class FingerprintPreprocessor:
         """
         pass
 
+    def preprocess(self):
+        """Voer de volledige preprocessing pipeline uit."""
+        self.enhance_contrast()
+        self.gabor_filtering()
+        self.detect_ridges()
+        self.skeletonize_image()
+
     def visualize(self): 
-        fig, axes = plt.subplots(1, 4, figsize=(12, 4), sharex=True, sharey=True)
+        fig, axes = plt.subplots(1, 5, figsize=(12, 4), sharex=True, sharey=True)
         ax = axes.ravel()
 
         ax[0].imshow(self.image, cmap='gray')
@@ -105,6 +120,10 @@ class FingerprintPreprocessor:
         ax[3].imshow(self.preprocessed_img, cmap='gray')
         ax[3].set_title('Binarized Image (Ridges)')
         ax[3].axis('off')
+
+        ax[4].imshow(self.minutiaes, cmap='gray')
+        ax[4].set_title('Minutiaes')
+        ax[4].axis('off')
 
         plt.tight_layout()
         plt.show()
