@@ -3,15 +3,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 from skimage.filters import threshold_otsu
-from skimage.morphology import skeletonize
+from skimage.filters import meijering
 from skimage.morphology import thin
 import numpy as np
 
 class FingerprintPreprocessor:
     def __init__(self, image_path):
         """Initialiseer met een afbeelding."""
-        self.image = cv2.imread(image_path, 2)
-        # self.image = cv2.resize(self.image,(1024,770))
+        # self.image = cv2.imread(image_path, 2)
+        self.image = image_path
         if self.image is None:
             raise ValueError("Kon afbeelding niet laden. Controleer het pad.")
         self.preprocessed_img = None
@@ -27,7 +27,7 @@ class FingerprintPreprocessor:
         self.image = cv2.medianBlur(self.image, 3)
 
     def gabor_filtering(self,kernel_size=32, w_45=0.5, w_135=0.5):
-        kernel_size = 36
+        kernel_size = 35
         img_45 = cv2.filter2D(self.image,cv2.CV_64F,cv2.getGaborKernel((kernel_size,kernel_size), 2, np.deg2rad(45),np.pi/4,0.5,0 ))
         img_135 = cv2.filter2D(self.image,cv2.CV_64F,cv2.getGaborKernel((kernel_size,kernel_size), 2, np.deg2rad(135),np.pi/4,0.5,0 ))
 
@@ -42,16 +42,18 @@ class FingerprintPreprocessor:
         self.preprocessed_img = np.uint8(filtered) 
     
     def detect_ridges(self): 
-        self.preprocessed_img = cv2.adaptiveThreshold(self.preprocessed_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 51, 10)
-
+        self.preprocessed_img = cv2.adaptiveThreshold(self.preprocessed_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 41, 10)
+        # Meijering-filter om richels te versterken
+        # ridge_enhanced = meijering(self.preprocessed_img, sigmas=range(1, 3), black_ridges=False)
+        # self.preprocessed_img = (ridge_enhanced * 255).astype(np.uint8)
     
 
     def skeletonize_image(self): 
-        ridge_thresh = threshold_otsu(-self.preprocessed_img) * 1.5
+        ridge_thresh = threshold_otsu(-self.preprocessed_img) * 1.8
         ridge_binary = (-self.preprocessed_img) > ridge_thresh
 
         ridge_binary = ridge_binary.astype(np.uint8) * 255
-        kernel = np.ones((5, 5), np.uint8)
+        kernel = np.ones((3, 3), np.uint8)
         ridge_binary = cv2.morphologyEx(ridge_binary, cv2.MORPH_CLOSE, kernel)
 
         # self.skeleton = skeletonize(ridge_binary > 0, method='lee').astype(np.float32)
@@ -59,7 +61,7 @@ class FingerprintPreprocessor:
         return self.thinned
     
     def skeleton_post_process(self, skeleton):
-        kernel = np.ones((3, 3), np.uint8)
+        kernel = np.ones((5, 5), np.uint8)
         thickened_skeleton = cv2.morphologyEx(skeleton, cv2.MORPH_DILATE, kernel)
     
         return thickened_skeleton

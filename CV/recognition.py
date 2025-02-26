@@ -1,4 +1,3 @@
-import cv2
 import os
 from preprocessing import FingerprintPreprocessor
 import matplotlib.pyplot as plt
@@ -78,8 +77,12 @@ matches_sorted = sorted(matches, key=lambda x: x[1], reverse=True)
 print("Alle matches gesorteerd: ", matches_sorted)
 
 # Haal de hoogste match op
+threshold = 95
 highest = matches_sorted[0] 
-print("Highest match: ", highest)
+if highest[1] >= threshold:
+    print("Best match is", highest)
+else: 
+    print("This person has no fingerprints in the database and therefore can't be identified in the system")
 
 
 
