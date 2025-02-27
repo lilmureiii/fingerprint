@@ -33,9 +33,15 @@ The [preprocessing.py](./CV/preprocessing.py) script is responsible for preparin
     <br>Thins the fingerprint ridges to a single-pixel width for minutiae extraction.
 
 - **Minutiae Detection**
-    <br>Identifies ridge endings and bifurcations, marking them in the image.
+    <br>Crossing number methods is a really simple way to detect ridge endings and ridge bifurcations.
+    Then the crossing number algorithm will look at 3x3 pixel blocks:
+
+    if middle pixel is black (represents ridge):
+    if pixel on boundary are crossed with the ridge once, then it is a possible ridge ending
+    if pixel on boundary are crossed with the ridge three times, then it is a ridge bifurcation
 
 - **Singularity Detection** (To be implemented)
+    <br> There is some code you can use from <https://github.com/cuevas1208/fingerprint_recognition/blob/master/utils/poincare.py> but you have to slightly change it because we don't use every argument they give with the funtion.
 
 ## Testing
 
