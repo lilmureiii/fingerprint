@@ -2,4 +2,11 @@
 
 ML
 slides_lessen
-CV/face_recognition
+CV/face_recognition/faces
+
+# alle afbeeldingen 
+CV/vingertop_images
+CV/handen
+CV/fingerprint_db2/vingertop_ID_4_0.jpg
+CV/vingertop_ID_4_0.png
+CV/test.png
