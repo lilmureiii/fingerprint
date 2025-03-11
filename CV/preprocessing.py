@@ -10,8 +10,8 @@ import numpy as np
 class FingerprintPreprocessor:
     def __init__(self, image_path):
         """Initialiseer met een afbeelding."""
-        # self.image = cv2.imread(image_path, 2)
-        self.image = image_path
+        self.image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+        # self.image = image_path
         if self.image is None:
             raise ValueError("Kon afbeelding niet laden. Controleer het pad.")
         self.preprocessed_img = None
@@ -41,6 +41,11 @@ class FingerprintPreprocessor:
         filtered = filtered / np.amax(filtered) * 255
         self.preprocessed_img = np.uint8(filtered) 
     
+    def segmentation(self): 
+        pass
+        # fgbg = cv2.createBackgroundSubtractorMOG2(detectShadows=False)
+        # self.preprocessed_img = fgbg.apply(self.preprocessed_img)
+
     def detect_ridges(self): 
         self.preprocessed_img = cv2.adaptiveThreshold(self.preprocessed_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 41, 10)
         # Meijering-filter om richels te versterken
@@ -114,37 +119,36 @@ class FingerprintPreprocessor:
         self.enhance_contrast()
         self.gabor_filtering()
         self.detect_ridges()
-        
         self.skeleton_post_process(self.skeletonize_image())
 
 
 
-    def visualize(self,thinned): 
-        fig, axes = plt.subplots(1, 5, figsize=(12, 4), sharex=True, sharey=True)
-        ax = axes.ravel()
+    # def visualize(self,thinned): 
+    #     fig, axes = plt.subplots(1, 5, figsize=(12, 4), sharex=True, sharey=True)
+    #     ax = axes.ravel()
 
-        ax[0].imshow(self.image, cmap='gray')
-        ax[0].set_title('Filtered Image')
-        ax[0].axis('off')
+    #     ax[0].imshow(self.image, cmap='gray')
+    #     ax[0].set_title('Filtered Image')
+    #     ax[0].axis('off')
 
-        # ax[1].imshow(skeleton, cmap='gray')
-        # ax[1].set_title('Skeleton (Ridges)')
-        # ax[1].axis('off')
+    #     # ax[1].imshow(skeleton, cmap='gray')
+    #     # ax[1].set_title('Skeleton (Ridges)')
+    #     # ax[1].axis('off')
 
-        ax[2].imshow(thinned, cmap='gray')
-        ax[2].set_title('Thinned (Ridges)')
-        ax[2].axis('off')
+    #     ax[2].imshow(thinned, cmap='gray')
+    #     ax[2].set_title('Thinned (Ridges)')
+    #     ax[2].axis('off')
 
-        ax[3].imshow(self.preprocessed_img, cmap='gray')
-        ax[3].set_title('Binarized Image (Ridges)')
-        ax[3].axis('off')
+    #     ax[3].imshow(self.preprocessed_img, cmap='gray')
+    #     ax[3].set_title('Binarized Image (Ridges)')
+    #     ax[3].axis('off')
 
-        ax[4].imshow(self.minutiaes, cmap='gray')
-        ax[4].set_title('Minutiaes')
-        ax[4].axis('off')
+    #     ax[4].imshow(self.minutiaes, cmap='gray')
+    #     ax[4].set_title('Minutiaes')
+    #     ax[4].axis('off')
 
-        plt.tight_layout()
-        plt.show()
+    #     plt.tight_layout()
+    #     plt.show()
     
 
 if __name__ == "__main__":

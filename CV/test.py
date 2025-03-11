@@ -17,12 +17,12 @@ for filename in os.listdir(input_folder):
     if filename.endswith(".png") or filename.endswith(".jpg"):
         image_path = os.path.join(input_folder, filename)
         print(f"Verwerken van: {filename}")
-        image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+        # image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
         # img = unsharp_mask(image, radius=5, amount=2)
         # img = np.uint8(img * 255) 
         try:
             # Initialiseer de preprocessor met de afbeelding
-            preprocessor = FingerprintPreprocessor(image)
+            preprocessor = FingerprintPreprocessor(image_path)
             preprocessor.preprocess()
             
             # Voeg de thinned afbeelding toe aan de lijst
