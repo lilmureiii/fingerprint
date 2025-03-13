@@ -28,7 +28,7 @@ cursor.execute("SELECT f_name, surname, face_encodings FROM person")
 db_faces = cursor.fetchall()
 
 
-ctk.set_appearance_mode("system")
+ctk.set_appearance_mode("light")
 
 # ---------------------------- GEZICHTEN INLADEN ---------------------------------
 
@@ -63,7 +63,7 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.conn_str = f'DRIVER={{ODBC Driver 17 for SQL Server}};SERVER=HP-MAEVE;DATABASE=attendance;Encrypt=no;Trusted_Connection=yes;'
-
+        self.configure(fg_color="#99adff")
         self.title("MWECAU face attendance system")
 
         large_text = ctk.CTkLabel(self,
@@ -75,16 +75,17 @@ class App(ctk.CTk):
         self.person = "Unknown"
 
         # Frames-container
-        frames_container = ctk.CTkFrame(self)
+        frames_container = ctk.CTkFrame(self,fg_color="#99adff")
         frames_container.pack(expand=True, fill="both", padx=10, pady=10)
 
+        # ______FRAME 1_______
         self.person_frame = ctk.CTkFrame(
-            frames_container, width=200, height=200)
+            frames_container, width=200, height=200, fg_color="#99adff")
         self.person_frame.pack(side="left", expand=True, fill="both", padx=10)
 
-        # Aanwezigheids-frame
-        self.att_frame = ctk.CTkFrame(frames_container, width=200, height=200)
-        self.att_frame.pack(side="right", expand=True, fill="both", padx=10)
+        # ______FRAME 2_______
+        self.att_frame = ctk.CTkFrame(frames_container, width=200, height=200, fg_color="#99adff")
+        self.att_frame.pack(side="left", expand=False, fill="both", padx=10)
 
         # Aanwezigheidslijst Label
         self.attendance_label = ctk.CTkLabel(
@@ -102,19 +103,20 @@ class App(ctk.CTk):
         self.nameLabel.pack(pady=10)
 
         # Foto Label
-        self.picLabel = ctk.CTkLabel(self.person_frame, text="")
+        img = ctk.CTkImage(Image.open("C:\hogent\Stage\CV\images\mwecau.png"), size=(200, 200))
+        self.picLabel = ctk.CTkLabel(self.person_frame, text="", image=img)
         self.picLabel.pack(pady=10)
         self.pic = None
 
         # Registratie-knop
         self.button = ctk.CTkButton(
-            self, text="Check fingerprint", command=self.test)
+            self, text="Check fingerprint", fg_color="#324dbe",command=self.test)
         self.button.pack(pady=10)
         video_capture.open(0)
 
         # Registratie-knop
         self.button = ctk.CTkButton(
-            self, text="Register", command=self.start_camera)
+            self, text="Register",fg_color="#324dbe", command=self.start_camera)
         self.button.pack(pady=10)
         video_capture.open(0)
 
