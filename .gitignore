@@ -1,5 +1,6 @@
 .venv
-
+.env
+CV/v1
 ML
 slides_lessen
 CV/face_recognition/faces
