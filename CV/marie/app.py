@@ -71,12 +71,16 @@ class App(ctk.CTk):
         self.navigation.grid(row=0, column=0, sticky="nesw")
         
         self.frame1 = AttendanceFrame(self)
-        self.frame2 = RegisterFrame(self)
+        self.frame2 = FaceIDFrame(self)
         self.frame3 = AllAttendanceFrame(self)
+        self.frame4 = FingerprintFrame(self)
+
         
         self.frame1.grid(row=0, column=1, sticky="nsew")
         self.frame2.grid(row=0, column=1, sticky="nsew")
         self.frame3.grid(row=0, column=1, sticky="nsew")
+        self.frame4.grid(row=0, column=1, sticky="nsew")
+
 
         self.frame1.tkraise()
 
@@ -96,8 +100,9 @@ class NavigationFrame(ctk.CTkFrame):
         image_label.grid(row=0, column=0, pady=10) 
         
         ctk.CTkButton(self, text="Today's attendance", command=self.show_frame1).grid(row=1, column=0, padx=20, pady=10)
-        ctk.CTkButton(self, text="All attendances", command=self.show_frame3).grid(row=3, column=0, padx=20, pady=10)
-        ctk.CTkButton(self, text="Register", command=self.show_frame2).grid(row=2, column=0, padx=20, pady=10)
+        ctk.CTkButton(self, text="All attendances", command=self.show_frame3).grid(row=2, column=0, padx=20, pady=10)
+        ctk.CTkButton(self, text="Face ID", command=self.show_frame2).grid(row=3, column=0, padx=20, pady=10)
+        ctk.CTkButton(self, text="Fingerpint", command=self.show_frame4).grid(row=4, column=0, padx=20, pady=10)
     
     def show_frame1(self):
         self.controller.frame1.tkraise()
@@ -105,8 +110,80 @@ class NavigationFrame(ctk.CTkFrame):
     def show_frame2(self):
         self.controller.frame2.tkraise()
     def show_frame3(self):
-
         self.controller.frame3.tkraise()
+    def show_frame4(self):
+        self.controller.frame4.tkraise()
+
+
+
+class FingerprintFrame(ctk.CTkFrame): # doesn't work yet
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.person = "Unknown"
+        ctk.CTkLabel(self, text="Fingerprint registration", font=("Arial", 18, "bold"),text_color="white").pack(pady=10)
+        self.nameLabel = ctk.CTkLabel(self, text="Click 'Register' to confirm your attendance!", text_color="white",font=("Arial", 18))
+        self.nameLabel.pack(pady=10)
+        self.picLabel = ctk.CTkLabel(self, text="")
+        self.picLabel.pack(pady=10)
+        self.configure(fg_color="#998eb8")
+        
+        ctk.CTkButton(self, text="Register", command=self.start_camera).pack(pady=10)
+    
+    def start_camera(self):
+        if not video_capture.isOpened():
+            video_capture.open(0)
+        self.nameLabel.configure(text="Getting ready... Please wait!")
+        self.after(1000, self.countdown, 4)
+    
+    def countdown(self, seconds):
+        if seconds > 0:
+            self.nameLabel.configure(text=f"Getting ready... {seconds} seconds left!")
+            self.after(1000, self.countdown, seconds-1)
+        else:
+            pil_image, person = face.register(known_face_encodings, known_face_names)
+            self.log_attendance(person)
+            self.person = person
+            self.pic = ImageTk.PhotoImage(pil_image)
+            self.picLabel.configure(image=self.pic)
+            self.picLabel.image = self.pic
+            ctk.CTkButton.configure(self, text="Add registration",command=self.start_camera)
+
+    def log_attendance(self, name):
+        conn = pyodbc.connect(conn_gen)
+        cursor = conn.cursor()
+        cursor.execute("SELECT person_id FROM person WHERE surname = ?", (name,))
+        person = cursor.fetchone()
+        if person is None:
+            self.nameLabel.configure(text=f"Person {name}")
+            cursor.close()
+            conn.close()
+            return
+    
+        person_id = person[0]
+        today = datetime.now().strftime("%Y-%m-%d")
+
+        # is the student already registered?
+        cursor.execute("SELECT COUNT(*) FROM Attendance WHERE person_id = ? AND CONVERT(date, CheckInTime) = ?", (person_id, today))
+        already_registered = cursor.fetchone()[0]
+
+        if already_registered > 0:
+            self.nameLabel.configure(text=f"{name} is already registered for today.")
+            cursor.close()
+            conn.close()
+            return
+        else: 
+            self.nameLabel.configure(text=f"{name} registered!")
+
+        # Log de aanwezigheid
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        cursor.execute("INSERT INTO Attendance (person_id, CheckInTime) VALUES (?, ?)", (person_id, now))
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        self.master.frame1.load_attendance()
+
 
 class AllAttendanceFrame(ctk.CTkFrame):
     def __init__(self, parent):
@@ -184,11 +261,11 @@ class AttendanceFrame(ctk.CTkFrame):
             self.attendance_text.insert("end", f"{f_name} {surname} | {check_in_time}\n")
         conn.close()
 
-class RegisterFrame(ctk.CTkFrame):
+class FaceIDFrame(ctk.CTkFrame):
     def __init__(self, parent):
         super().__init__(parent)
         self.person = "Unknown"
-        ctk.CTkLabel(self, text="Register", font=("Arial", 18, "bold"),text_color="white").pack(pady=10)
+        ctk.CTkLabel(self, text="Face registration", font=("Arial", 18, "bold"),text_color="white").pack(pady=10)
         self.nameLabel = ctk.CTkLabel(self, text="Click 'Register' to confirm your attendance!", text_color="white",font=("Arial", 18))
         self.nameLabel.pack(pady=10)
         self.picLabel = ctk.CTkLabel(self, text="")
