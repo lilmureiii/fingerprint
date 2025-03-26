@@ -62,7 +62,7 @@ class App(ctk.CTk):
         super().__init__()
         self.geometry("1000x500")
         self.title("Attendance System")
-        self.configure(bg_color="purple", fg_color="purple")
+        self.configure(bg_color="#8a7bb4", fg_color="#8a7bb4")
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
@@ -89,9 +89,11 @@ class NavigationFrame(ctk.CTkFrame):
     def __init__(self, parent):
         super().__init__(parent)
         self.controller = parent
-        self.configure(fg_color="purple")
+        self.configure(fg_color="#8a7bb4")
         
-        # ctk.CTkLabel(self, text="Navigation", font=("Helvetica", 20)).grid(row=0, column=0, padx=20, pady=10)
+        image = ctk.CTkImage(light_image=Image.open("C:\hogent\Stage\CV\images\mwecau.png"), size=(100, 100))
+        image_label = ctk.CTkLabel(self, image=image, text="")  
+        image_label.grid(row=0, column=0, pady=10) 
         
         ctk.CTkButton(self, text="Today's attendance", command=self.show_frame1).grid(row=1, column=0, padx=20, pady=10)
         ctk.CTkButton(self, text="All attendances", command=self.show_frame3).grid(row=3, column=0, padx=20, pady=10)
@@ -109,9 +111,9 @@ class NavigationFrame(ctk.CTkFrame):
 class AllAttendanceFrame(ctk.CTkFrame):
     def __init__(self, parent):
         super().__init__(parent)
-        ctk.CTkLabel(self, text="All attendance list", font=("Arial", 18, "bold")).pack(pady=10)
+        ctk.CTkLabel(self, text="All attendance list", font=("Arial", 18, "bold"), text_color="white").pack(pady=10)
         
-        self.configure(fg_color="purple")
+        self.configure(fg_color="#998eb8")
         self.search_entry = ctk.CTkEntry(self, 
             placeholder_text="Enter the student's name",
             height=40,
@@ -165,11 +167,11 @@ class AllAttendanceFrame(ctk.CTkFrame):
 class AttendanceFrame(ctk.CTkFrame):
     def __init__(self, parent):
         super().__init__(parent)
-        ctk.CTkLabel(self, text="Today's attendance list", font=("Arial", 18, "bold")).pack(pady=10)
+        ctk.CTkLabel(self, text="Today's attendance list", font=("Arial", 18, "bold"),text_color="white").pack(pady=10)
         self.attendance_text = ctk.CTkTextbox(self, height=10)
         self.attendance_text.pack(expand=True, fill="both", padx=10, pady=10)
         self.load_attendance()
-        self.configure(fg_color="purple")
+        self.configure(fg_color="#998eb8")
     def load_attendance(self):
         self.attendance_text.delete("1.0", "end")
         today = datetime.now().strftime("%Y-%m-%d")
@@ -186,13 +188,14 @@ class RegisterFrame(ctk.CTkFrame):
     def __init__(self, parent):
         super().__init__(parent)
         self.person = "Unknown"
-        ctk.CTkLabel(self, text="Register", font=("Arial", 18, "bold")).pack(pady=10)
-        self.nameLabel = ctk.CTkLabel(self, text="Click 'Register' to confirm your attendance!", font=("Arial", 18))
+        ctk.CTkLabel(self, text="Register", font=("Arial", 18, "bold"),text_color="white").pack(pady=10)
+        self.nameLabel = ctk.CTkLabel(self, text="Click 'Register' to confirm your attendance!", text_color="white",font=("Arial", 18))
         self.nameLabel.pack(pady=10)
         self.picLabel = ctk.CTkLabel(self, text="")
         self.picLabel.pack(pady=10)
+        self.configure(fg_color="#998eb8")
         
-        ctk.CTkButton(self, text="Register", fg_color="#324dbe", command=self.start_camera).pack(pady=10)
+        ctk.CTkButton(self, text="Register", command=self.start_camera).pack(pady=10)
     
     def start_camera(self):
         if not video_capture.isOpened():
