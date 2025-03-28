@@ -1,4 +1,4 @@
-# Fingerprint / Face Recognition Project - Jonas and Marie-Eve
+# Fingerprint / Face Recognition Project: the application - Marie-Eve
 ## Installation 
 
 Install the dependencies with `pip install -r requirements.txt`
@@ -17,8 +17,10 @@ And the project relies on the following libraries for the face recognition:
 - OpenCV
 - face-recognition
 - Numpy
-- Csv
-- Datetime
+- CustomTkinter
+- PIL
+- PyODBC
+- Base64
 
 *Remark*: <br>
 If `pip install face_recognition` does not want to work, you have to download Cmake (online) and install Cmake with `pip install cmake`. Download Visual Studio Installer for C++ and inside this app install Visual Studio Build tools for 2022. If this is installes go back to your terminal and install dlib and face_recognition.
@@ -100,25 +102,35 @@ As we approached the end of the base for the fingerprint recognition project, we
 
 <details>
 
-<summary><h2>Face Recognition - live_face2.py </h2></summary>
+<summary><h2>Face Recognition</h2></summary>
+<summary><h3>The application</h3></summary>
+For the project I built an interface primary for the face recognition, but also included the fingerprint detection to register attendance. The application is built in python, combining OpenCV, Tkinter (CustomTkinter) and an SQL server database.
 
-- **Webcam**
-    <br>First a connection is made with the webcam of the computer to get live footage.
-    <br>A rectangle is placed around all faces that the script recognizes.
+**Important features**
+- Face recognition: loads saved facial information from the database en compares is with the live webcam image.  
+- Fingerprint recognition: there is already a button for this in the interface but no code connected to it. For the full fingerprint recognition see [fingerprint.py](./fingerprint.py).
+- Database integration: uses an SQL Server connection to save the attendance of students. For the moment this is only a local database. But with [encode.py](./encode.py) all faces can be encoded in the school server where the real database is.
+- Graphic user interface: to register attendances and look at all attendances.
+    - Made with different frames. One for the attendance list for the day, one to look up all attendances and one to register a person for that day. 
+    - If a person is already registered for that day the application will tell that the person was already registered.
 
-- **Face recognition**
-    <br>The footage is matched with the face encodings from the image database. 
-    <br>Every face is checked to find a match and if a match is found the name of the recognised face is shown in the rectangle.
-    <br>If there is no match, the rectangle shows "Unknown"
+**How it works**
+1. The application connects to an SQL database and retrieves known face encodings.
+    - If there are no face encodings yet, run the encode script to encode all faces for the recognition.
 
-- **Registration**
-    <br>If a match is found the system registers the name in a csv file. 
-    <br>The csv file contains the name of the person, date and time.
-    <br>There is also a check: 
-    - if a face is already registered in the system on that day it will not be registered again if it recognizes the face again.
-    <br>The logging of the attendance happens in the csv file `attendance.csv`
+2. A live webcam feed is started for face registration.
 
+3. Upon successful recognition, presence is automatically stored in the database.
+
+4. Users can manually view the attendance list via the UI.
+
+5. The application provides navigation between different sections:
+    - Current presence
+    - All registered presences
+    - Facial registration
+    - (Future) fingerprint registration
 
 ### Conclusion project
+The face recognition works much better than the fingerprint recognition. Even with a poor webcam quality the application succeeds to extract important features of a face and then compare it with other faces. For the moment you can only use the python script locally and not on the server since we do not have the rights to install dependencies and modules on the server. So if this application would be used in the future on the server database, only a column for the face encodings has to be added to the database server and then the [encode.py](./encode.py) has to be executed. After this the application should be usable in the server environment. 
 
 </details>

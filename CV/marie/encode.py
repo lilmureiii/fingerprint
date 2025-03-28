@@ -44,6 +44,6 @@ for student in students:
             print(f"Geen gezicht gevonden voor student met ID: {person_id}")
     
     except Exception as e:
-        print(f"⚠️ Fout bij student met ID {person_id}: {e}")
+        print(f"Fout bij student met ID {person_id}: {e}")
 
 conn.close()
